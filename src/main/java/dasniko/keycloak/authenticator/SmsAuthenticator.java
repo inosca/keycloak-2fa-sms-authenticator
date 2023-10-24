@@ -1,7 +1,8 @@
 package dasniko.keycloak.authenticator;
 
-import dasniko.keycloak.authenticator.gateway.SmsServiceFactory;
-import jakarta.ws.rs.core.Response;
+import java.util.Locale;
+import java.util.logging.Logger;
+
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
@@ -14,24 +15,44 @@ import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
-import java.util.Locale;
+import dasniko.keycloak.authenticator.gateway.SmsServiceFactory;
+import jakarta.ws.rs.core.Response;
 
 /**
  * @author Niko Köbler, https://www.n-k.de, @dasniko
  */
 public class SmsAuthenticator implements Authenticator {
+	private static final Logger log = Logger.getLogger(SmsAuthenticator.class.getName());
 
 	private static final String MOBILE_NUMBER_FIELD = "mobile_number";
 	private static final String TPL_CODE = "login-sms.ftl";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
+		log.warning("authenticate");
+
 		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
 
 		String mobileNumber = user.getFirstAttribute(MOBILE_NUMBER_FIELD);
-		// mobileNumber of course has to be further validated on proper format, country code, ...
+		if (mobileNumber == null) {
+			log.warning("no mobile number configured, showing form");
+			Response challenge = context.form().createForm("update-mobile-number.ftl");
+			context.challenge(challenge);
+			return;
+		}
+
+		codeChallenge(context);
+
+	}
+
+	private void codeChallenge(AuthenticationFlowContext context) {
+		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+		KeycloakSession session = context.getSession();
+		UserModel user = context.getUser();
+
+		String mobileNumber = user.getFirstAttribute(MOBILE_NUMBER_FIELD);
 
 		int length = Integer.parseInt(config.getConfig().get(SmsConstants.CODE_LENGTH));
 		int ttl = Integer.parseInt(config.getConfig().get(SmsConstants.CODE_TTL));
@@ -52,13 +73,14 @@ public class SmsAuthenticator implements Authenticator {
 			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().setError("smsAuthSmsNotSent", e.getMessage())
-					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+					context.form().setError("smsAuthSmsNotSent", e.getMessage())
+							.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
 		}
 	}
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
+		log.warning("action");
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst(SmsConstants.CODE);
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -66,8 +88,12 @@ public class SmsAuthenticator implements Authenticator {
 		String ttl = authSession.getAuthNote(SmsConstants.CODE_TTL);
 
 		if (code == null || ttl == null) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+			String enteredMobileNr = context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number");
+			log.warning("no code found, saving mobile number: " + enteredMobileNr);
+			UserModel user = context.getUser();
+			user.setSingleAttribute(MOBILE_NUMBER_FIELD, enteredMobileNr);
+
+			codeChallenge(context);
 			return;
 		}
 
@@ -101,14 +127,11 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
-		return user.getFirstAttribute(MOBILE_NUMBER_FIELD) != null;
+		return true;
 	}
 
 	@Override
 	public void setRequiredActions(KeycloakSession session, RealmModel realm, UserModel user) {
-		// this will only work if you have the required action from here configured:
-		// https://github.com/dasniko/keycloak-extensions-demo/tree/main/requiredaction
-		user.addRequiredAction("mobile-number-ra");
 	}
 
 	@Override
