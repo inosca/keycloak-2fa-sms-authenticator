@@ -15,7 +15,7 @@
                 </div>
                 <div class="${properties.kcInputWrapperClass!}">
                     <input type="tel" id="mobile_number" name="mobile_number" class="${properties.kcInputClass!}"
-                value="${mobile_number}" required aria-invalid="<#if messagesPerField.existsError('mobile_number')>true</#if>"/>
+                value="${mobile_number!''}" required aria-invalid="<#if messagesPerField.existsError('mobile_number')>true</#if>"/>
                     <#if messagesPerField.existsError('mobile_number')>
                         <span id="input-error-mobile-number" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
                             ${kcSanitize(messagesPerField.get('mobile_number'))?no_esc}
@@ -48,7 +48,7 @@
         function req(phoneNumber) {
             const params = {params: {phoneNumber}}
             axios.get(window.location.origin + '/auth/realms/${realm.name}/sms/verification-code', params)
-                .then(res => app.disableSend(res.data.expiresIn))
+                .then(res => app.disableSend(10))
                 .catch(e => app.errorMessage = e.response.data.error);
         }
 
@@ -84,7 +84,7 @@
                         }
                     }
                 });
-        <#if phoneNumber??>
+        <#if mobile_number??>
             req('${mobile_number}');
         </#if>
       </script>
