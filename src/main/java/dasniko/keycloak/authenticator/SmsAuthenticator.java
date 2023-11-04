@@ -82,12 +82,8 @@ public class SmsAuthenticator implements Authenticator {
 		String ttl = authSession.getAuthNote(SmsConstants.CODE_TTL);
 
 		if (code == null || ttl == null) {
-			String enteredMobileNr = context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number");
-			log.warning("no code found, saving mobile number: " + enteredMobileNr);
-			UserModel user = context.getUser();
-			user.setSingleAttribute(MOBILE_NUMBER_FIELD, enteredMobileNr);
-
-			codeChallenge(context);
+			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
 			return;
 		}
 
@@ -126,6 +122,7 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public void setRequiredActions(KeycloakSession session, RealmModel realm, UserModel user) {
+		user.addRequiredAction("mobile-number-ra");
 	}
 
 	@Override

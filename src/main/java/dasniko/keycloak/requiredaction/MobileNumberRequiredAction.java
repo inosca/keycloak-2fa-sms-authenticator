@@ -1,5 +1,6 @@
 package dasniko.keycloak.requiredaction;
 
+import java.util.logging.Logger;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.authentication.InitiatedActionSupport;
@@ -16,6 +17,7 @@ import java.util.function.Consumer;
  * @author Niko Köbler, https://www.n-k.de, @dasniko
  */
 public class MobileNumberRequiredAction implements RequiredActionProvider {
+	private static final Logger log = Logger.getLogger(MobileNumberRequiredAction.class.getName());
 
 	public static final String PROVIDER_ID = "mobile-number-ra";
 
@@ -48,16 +50,47 @@ public class MobileNumberRequiredAction implements RequiredActionProvider {
 
 		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
 		String mobileNumber = formData.getFirst(MOBILE_NUMBER_FIELD);
+		String code = formData.getFirst("code");
 
 		if (Validation.isBlank(mobileNumber) || mobileNumber.length() < 5) {
 			context.challenge(createForm(context, form -> form.addError(new FormMessage(
-				MOBILE_NUMBER_FIELD,
-				"Bitte erfassen Sie eine gültige Telefonnummer"
-			))));
+					MOBILE_NUMBER_FIELD,
+					"Bitte erfassen Sie eine gültige Telefonnummer"))));
 			return;
 		}
 
-		user.setSingleAttribute(MOBILE_NUMBER_FIELD, mobileNumber);
+		if (user.getFirstAttribute("code") == null
+				|| !mobileNumber.equals(user.getFirstAttribute(MOBILE_NUMBER_FIELD))) {
+			String generatedCode = String.valueOf((int) Math.floor(Math.random() * 100000));
+			log.warning("no code found or mobile number changed, sending code" + generatedCode);
+			user.setSingleAttribute(MOBILE_NUMBER_FIELD, mobileNumber);
+			user.setSingleAttribute("code", generatedCode);
+			context.challenge(createForm(context, form -> {
+				form.setAttribute("codeSent", true);
+				form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
+			}));
+			return;
+		}
+
+		if (Validation.isBlank(code)) {
+			context.challenge(createForm(context, form -> {
+				form.addError(new FormMessage("code", "Bitte Code eingeben"));
+				form.setAttribute("codeSent", true);
+				form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
+			}));
+			return;
+		}
+		if (!code.equals(user.getFirstAttribute("code"))) {
+			context.challenge(createForm(context, form -> {
+				form.addError(new FormMessage("code", "Code ungültig"));
+				form.setAttribute("codeSent", true);
+				form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
+			}));
+			return;
+		}
+
+		user.setSingleAttribute("verifiedMobileNr", "true");
+		user.removeAttribute("code");
 		user.removeRequiredAction(PROVIDER_ID);
 		context.getAuthenticationSession().removeRequiredAction(PROVIDER_ID);
 
