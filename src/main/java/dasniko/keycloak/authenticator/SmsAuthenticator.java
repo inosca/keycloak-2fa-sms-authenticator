@@ -10,7 +10,6 @@ import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.models.AuthenticationExecutionModel;
-import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -31,7 +30,7 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
-		Map<String, String> config = context.getAuthenticatorConfig().getConfig();
+		Map<String, String> config = context.getRealm().getAuthenticatorConfigByAlias("SMS auth").getConfig();
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
 
@@ -83,7 +82,7 @@ public class SmsAuthenticator implements Authenticator {
 
 		if (code == null || ttl == null) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+					context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
 			return;
 		}
 
@@ -117,7 +116,8 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
-		return true;
+		return user.getFirstAttribute(MOBILE_NUMBER_FIELD) != null
+				&& user.getFirstAttribute("verifiedMobileNr").equals("true");
 	}
 
 	@Override

@@ -7,11 +7,16 @@ import org.keycloak.authentication.InitiatedActionSupport;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.forms.login.LoginFormsProvider;
+import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.services.validation.Validation;
 
+import dasniko.keycloak.authenticator.SmsAuthenticator;
+
 import java.util.function.Consumer;
+import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author Niko Köbler, https://www.n-k.de, @dasniko
@@ -30,7 +35,8 @@ public class MobileNumberRequiredAction implements RequiredActionProvider {
 
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
-		if (context.getUser().getFirstAttribute(MOBILE_NUMBER_FIELD) == null) {
+		if (context.getUser().getFirstAttribute(MOBILE_NUMBER_FIELD) == null
+				|| !context.getUser().getFirstAttribute("verifiedMobileNr").equals("true")) {
 			context.getUser().addRequiredAction(PROVIDER_ID);
 			context.getAuthenticationSession().addRequiredAction(PROVIDER_ID);
 		}
@@ -55,34 +61,42 @@ public class MobileNumberRequiredAction implements RequiredActionProvider {
 		if (Validation.isBlank(mobileNumber) || mobileNumber.length() < 5) {
 			context.challenge(createForm(context, form -> form.addError(new FormMessage(
 					MOBILE_NUMBER_FIELD,
-					"Bitte erfassen Sie eine gültige Telefonnummer"))));
+					"setupInvalidMobileNr"))));
 			return;
 		}
 
-		if (user.getFirstAttribute("code") == null
-				|| !mobileNumber.equals(user.getFirstAttribute(MOBILE_NUMBER_FIELD))) {
-			String generatedCode = String.valueOf((int) Math.floor(Math.random() * 100000));
-			log.warning("no code found or mobile number changed, sending code" + generatedCode);
-			user.setSingleAttribute(MOBILE_NUMBER_FIELD, mobileNumber);
-			user.setSingleAttribute("code", generatedCode);
-			context.challenge(createForm(context, form -> {
-				form.setAttribute("codeSent", true);
-				form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
-			}));
+		if (user.getFirstAttribute("code") == null || Validation.isBlank(code)) {
+			RealmModel realm = context.getRealm();
+			Map<String, String> config = realm.getAuthenticatorConfigByAlias("SMS auth").getConfig();
+
+			String generatedCode;
+			try {
+				generatedCode = SmsAuthenticator.codeChallenge(
+						config,
+						context.getSession(),
+						context.getSession().getContext().resolveLocale(user),
+						mobileNumber);
+				user.setSingleAttribute(MOBILE_NUMBER_FIELD, mobileNumber);
+				user.setSingleAttribute("code", generatedCode);
+				context.challenge(createForm(context, form -> {
+					form.addSuccess(new FormMessage("code", "smsAuthCodeSent"));
+					form.setAttribute("codeSent", true);
+					form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
+				}));
+			} catch (IOException e) {
+				log.log(java.util.logging.Level.WARNING, "error sending code", e);
+				context.challenge(createForm(context, form -> {
+					form.addError(new FormMessage("code",
+							"setupAuthCodeNotSent"));
+					form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
+				}));
+			}
 			return;
 		}
 
-		if (Validation.isBlank(code)) {
-			context.challenge(createForm(context, form -> {
-				form.addError(new FormMessage("code", "Bitte Code eingeben"));
-				form.setAttribute("codeSent", true);
-				form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
-			}));
-			return;
-		}
 		if (!code.equals(user.getFirstAttribute("code"))) {
 			context.challenge(createForm(context, form -> {
-				form.addError(new FormMessage("code", "Code ungültig"));
+				form.addError(new FormMessage("code", "smsAuthCodeInvalid"));
 				form.setAttribute("codeSent", true);
 				form.setAttribute(MOBILE_NUMBER_FIELD, mobileNumber == null ? "" : mobileNumber);
 			}));

@@ -13,11 +13,11 @@
 				<div class="${properties.kcInputWrapperClass!}">
 					<input type="tel" id="mobile_number" name="mobile_number" class="${properties.kcInputClass!}"
 								 value="${mobile_number}" required aria-invalid="<#if messagesPerField.existsError('mobile_number')>true</#if>"/>
-		  <#if messagesPerField.existsError('mobile_number')>
+						<#if messagesPerField.existsError('mobile_number')>
 							<span id="input-error-mobile-number" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
 									${kcSanitize(messagesPerField.get('mobile_number'))?no_esc}
 							</span><br />
-		  </#if>
+						</#if>
 						<span class="uk-text-small uk-text-muted">${msg("mobileNumberHelp")}</span>
 				</div>
 			</div>
@@ -28,12 +28,13 @@
 					</div>
 					<div class="${properties.kcInputWrapperClass!}">
 						<input type="tel" id="code" name="code" class="${properties.kcInputClass!}"
-									 required aria-invalid="<#if messagesPerField.existsError('code')>true</#if>"/>
+									 aria-invalid="<#if messagesPerField.existsError('code')>true</#if>"/>
 							<#if messagesPerField.existsError('code')>
-								<span id="input-error-mobile-number" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
+								<span id="input-error-code" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
 										${kcSanitize(messagesPerField.get('code'))?no_esc}
 								</span><br />
 							</#if>
+						<span class="uk-text-small uk-text-muted">${msg("setupCodeHelp")}</span>
 					</div>
 				</div>
 			</#if>
