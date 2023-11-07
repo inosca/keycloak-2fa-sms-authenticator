@@ -116,8 +116,9 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
-		return user.getFirstAttribute(MOBILE_NUMBER_FIELD) != null
-				&& user.getFirstAttribute("verifiedMobileNr").equals("true");
+		String verifiedMobileNr = user.getFirstAttribute("verifiedMobileNr");
+		return user.getFirstAttribute(MOBILE_NUMBER_FIELD) != null && verifiedMobileNr != null
+			&& verifiedMobileNr.equals("true");
 	}
 
 	@Override

@@ -35,8 +35,9 @@ public class MobileNumberRequiredAction implements RequiredActionProvider {
 
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
-		if (context.getUser().getFirstAttribute(MOBILE_NUMBER_FIELD) == null
-				|| !context.getUser().getFirstAttribute("verifiedMobileNr").equals("true")) {
+		String verifiedMobileNr = context.getUser().getFirstAttribute("verifiedMobileNr");
+		if (context.getUser().getFirstAttribute(MOBILE_NUMBER_FIELD) == null || verifiedMobileNr == null
+				|| !verifiedMobileNr.equals("true")) {
 			context.getUser().addRequiredAction(PROVIDER_ID);
 			context.getAuthenticationSession().addRequiredAction(PROVIDER_ID);
 		}
