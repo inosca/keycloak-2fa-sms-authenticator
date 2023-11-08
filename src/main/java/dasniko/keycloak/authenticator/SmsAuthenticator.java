@@ -73,7 +73,6 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
-		log.warning("action");
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst(SmsConstants.CODE);
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
