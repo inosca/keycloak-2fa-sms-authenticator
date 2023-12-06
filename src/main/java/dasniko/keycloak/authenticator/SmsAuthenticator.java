@@ -45,6 +45,7 @@ public class SmsAuthenticator implements Authenticator {
 			authSession.setAuthNote(SmsConstants.CODE_TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
 			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
 		} catch (Exception e) {
+			log.log(java.util.logging.Level.SEVERE, "error sending code", e);
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 					context.form().setError("smsAuthSmsNotSent", e.getMessage())
 							.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));

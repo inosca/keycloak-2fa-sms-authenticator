@@ -35,24 +35,23 @@ public class EcallSmsService implements SmsService {
 	}
 
 	@Override
-	public void send(String phoneNumber, String message) {
+	public void send(String phoneNumber, String message) throws IOException {
 		EcallRequestContent content = new EcallRequestContent();
 		content.text = message;
 		EcallRequestBody body = new EcallRequestBody();
 		body.from = this.senderNr;
 		body.to = phoneNumber;
 		body.content = content;
-		try {
-			SimpleHttp.Response response = SimpleHttp
+		SimpleHttp.Response response = SimpleHttp
 				.doPost("https://rest.ecall.ch/api/message", this.session)
 				.json(body)
 				.authBasic(this.username, this.password)
 				.acceptJson()
 				.asResponse();
-		} catch (IOException ex) {
-			log.error("Ecall API call failed", ex);
+		if (response.getStatus() != 200) {
+			throw new IOException(
+					"Ecall API call failed with status " + response.getStatus() + ": " + response.asString());
 		}
-
 	}
 
 }

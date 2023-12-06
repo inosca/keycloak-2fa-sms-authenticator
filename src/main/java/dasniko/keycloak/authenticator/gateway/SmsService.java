@@ -1,5 +1,6 @@
 package dasniko.keycloak.authenticator.gateway;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -7,6 +8,6 @@ import java.util.Map;
  */
 public interface SmsService {
 
-	void send(String phoneNumber, String message);
+	void send(String phoneNumber, String message) throws IOException;
 
 }
