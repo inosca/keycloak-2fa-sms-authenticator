@@ -42,7 +42,8 @@ public class SmsAuthenticator implements Authenticator {
 			AuthenticationSessionModel authSession = context.getAuthenticationSession();
 			authSession.setAuthNote(SmsConstants.CODE, code);
 			int ttl = Integer.parseInt(config.get(SmsConstants.CODE_TTL));
-			authSession.setAuthNote(SmsConstants.CODE_TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+			authSession.setAuthNote(SmsConstants.CODE_TTL,
+					Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
 			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
 		} catch (Exception e) {
 			log.log(java.util.logging.Level.SEVERE, "error sending code", e);
@@ -79,10 +80,35 @@ public class SmsAuthenticator implements Authenticator {
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		String code = authSession.getAuthNote(SmsConstants.CODE);
 		String ttl = authSession.getAuthNote(SmsConstants.CODE_TTL);
+		String failedAttemptsString = authSession.getAuthNote(SmsConstants.FAILED_ATTEMPTS);
+		Integer failedAttempts = failedAttemptsString == null ? 0 : Integer.parseInt(failedAttemptsString);
 
 		if (code == null || ttl == null) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 					context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+			return;
+		}
+
+		// check if user is locked
+		String lockedUntil = authSession.getAuthNote(SmsConstants.LOCKED_UNTIL);
+		if (lockedUntil != null && Long.parseLong(lockedUntil) > System.currentTimeMillis()) {
+			context.failureChallenge(AuthenticationFlowError.USER_TEMPORARILY_DISABLED,
+					context.form().setAttribute("realm", context.getRealm())
+							.setError("smsAuthCodeInvalid").createForm(TPL_CODE));
+			return;
+		} else if (lockedUntil != null) {
+			authSession.removeAuthNote(SmsConstants.LOCKED_UNTIL);
+			failedAttempts = 0;
+		}
+
+		Map<String, String> config = context.getRealm().getAuthenticatorConfigByAlias("SMS auth").getConfig();
+		if (failedAttempts >= Integer.parseInt(config.get(SmsConstants.MAX_FAILED_ATTEMPTS))) {
+			context.failureChallenge(AuthenticationFlowError.USER_TEMPORARILY_DISABLED,
+					context.form().setAttribute("realm", context.getRealm())
+							.setError("smsAuthCodeInvalid").createForm(TPL_CODE));
+			authSession.setAuthNote(SmsConstants.LOCKED_UNTIL, Long.toString(
+					System.currentTimeMillis() + Integer.parseInt(config.get(SmsConstants.LOCK_DURATION)) * 1000));
+			log.log(java.util.logging.Level.SEVERE, "user locked after too many failed attempts to enter SMS code");
 			return;
 		}
 
@@ -100,6 +126,7 @@ public class SmsAuthenticator implements Authenticator {
 			// invalid
 			AuthenticationExecutionModel execution = context.getExecution();
 			if (execution.isRequired()) {
+				authSession.setAuthNote(SmsConstants.FAILED_ATTEMPTS, Integer.toString(failedAttempts + 1));
 				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
 						context.form().setAttribute("realm", context.getRealm())
 								.setError("smsAuthCodeInvalid").createForm(TPL_CODE));
@@ -118,7 +145,7 @@ public class SmsAuthenticator implements Authenticator {
 	public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
 		String verifiedMobileNr = user.getFirstAttribute("verifiedMobileNr");
 		return user.getFirstAttribute(MOBILE_NUMBER_FIELD) != null && verifiedMobileNr != null
-			&& verifiedMobileNr.equals("true");
+				&& verifiedMobileNr.equals("true");
 	}
 
 	@Override
