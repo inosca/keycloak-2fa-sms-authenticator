@@ -11,4 +11,8 @@ public class SmsConstants {
 	public String SIMULATION_MODE = "simulation";
 	public String USERNAME = "username";
 	public String PASSWORD = "password";
+	public String FAILED_ATTEMPTS = "failedAttempts";
+	public String LOCKED_UNTIL = "lockedUntil";
+	public String MAX_FAILED_ATTEMPTS = "maxFailedAttempts";
+	public String LOCK_DURATION = "lockDuration";
 }

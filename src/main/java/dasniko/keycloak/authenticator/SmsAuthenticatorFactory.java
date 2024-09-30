@@ -59,14 +59,28 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 	@Override
 	public List<ProviderConfigProperty> getConfigProperties() {
 		return List.of(
-			new ProviderConfigProperty(SmsConstants.CODE_LENGTH, "Code length", "The number of digits of the generated code.", ProviderConfigProperty.STRING_TYPE, 6),
-			new ProviderConfigProperty(SmsConstants.CODE_TTL, "Time-to-live", "The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE, "300"),
-			new ProviderConfigProperty(SmsConstants.SENDER_NR, "SenderNr", "The number that is displayed as the message sender on the receiving device.", ProviderConfigProperty.STRING_TYPE, "004199999999"),
-			new ProviderConfigProperty(SmsConstants.USERNAME, "Username", "Ecall API username.", ProviderConfigProperty.STRING_TYPE, "user"),
-			new ProviderConfigProperty(SmsConstants.PASSWORD, "Password", "Ecall API password.", ProviderConfigProperty.PASSWORD, "", true),
+				new ProviderConfigProperty(SmsConstants.CODE_LENGTH, "Code length",
+						"The number of digits of the generated code.", ProviderConfigProperty.STRING_TYPE, 6),
+				new ProviderConfigProperty(SmsConstants.CODE_TTL, "Time-to-live",
+						"The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE,
+						"300"),
+				new ProviderConfigProperty(SmsConstants.SENDER_NR, "SenderNr",
+						"The number that is displayed as the message sender on the receiving device.",
+						ProviderConfigProperty.STRING_TYPE, "004199999999"),
+				new ProviderConfigProperty(SmsConstants.USERNAME, "Username", "Ecall API username.",
+						ProviderConfigProperty.STRING_TYPE, "user"),
+				new ProviderConfigProperty(SmsConstants.PASSWORD, "Password", "Ecall API password.",
+						ProviderConfigProperty.PASSWORD, "", true),
 
-			new ProviderConfigProperty(SmsConstants.SIMULATION_MODE, "Simulation mode", "In simulation mode, the SMS won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true)
-		);
+				new ProviderConfigProperty(SmsConstants.SIMULATION_MODE, "Simulation mode",
+						"In simulation mode, the SMS won't be sent, but printed to the server logs",
+						ProviderConfigProperty.BOOLEAN_TYPE, true),
+				new ProviderConfigProperty(SmsConstants.MAX_FAILED_ATTEMPTS, "Max failed attempts",
+						"The maximum number of failed attempts before the user is locked out.",
+						ProviderConfigProperty.STRING_TYPE, "10"),
+				new ProviderConfigProperty(SmsConstants.LOCK_DURATION, "Lock duration",
+						"The duration in seconds the user is locked out after the maximum number of failed attempts.",
+						ProviderConfigProperty.STRING_TYPE, "60"));
 	}
 
 	@Override
